@@ -1,0 +1,11 @@
+# ESPHome
+.esphome/
+secrets.yaml
+
+# Python
+__pycache__/
+*.pyc
+
+# Claude Code
+.claude/capture/*.txt
+.claude/capture/*.py
