@@ -42,7 +42,7 @@ PoC 階段 ESP32 用 USB 供電，主機 5V 紅線只提供 Drain 側 pull-up。
 
 ```
 ├── poc/poc.ino                          # PoC Arduino sketch（Serial debug）
-├── bathroom-fan.yaml                    # ESPHome 設定檔
+├── fan.yaml                             # ESPHome 設定檔
 ├── components/panasonic_fv30buy3w/      # ESPHome custom component
 │   ├── __init__.py
 │   ├── select.py
@@ -59,13 +59,14 @@ PoC 階段 ESP32 用 USB 供電，主機 5V 紅線只提供 Drain 側 pull-up。
 
 ## Home Assistant Entities
 
-| Entity          | 類型                       | 說明                                                 |
-| --------------- | -------------------------- | ---------------------------------------------------- |
-| Fan Mode        | select                     | 待機 / 換氣 15分 / ... / 乾燥涼 24小時（共 23 選項） |
-| Remaining Time  | text_sensor                | ESP32 內部倒數計時（24小時模式顯示「連續」）         |
-| Host Connection | binary_sensor (diagnostic) | 主機回應狀態 ON/OFF                                  |
-| Uptime          | sensor (diagnostic)        | 運行時間（小時）                                     |
-| WiFi Signal     | sensor (diagnostic)        | WiFi 信號強度                                        |
+| Entity          | 類型                     | 說明                                                 |
+| --------------- | ------------------------ | ---------------------------------------------------- |
+| Fan Mode        | select                   | 待機 / 換氣 15分 / ... / 乾燥涼 24小時（共 23 選項） |
+| Remaining Time  | text_sensor              | ESP32 內部倒數計時（24小時模式顯示「連續」）         |
+| Host Connection | binary_sensor            | 主機回應狀態 ON/OFF                                  |
+| IP Address      | text_sensor (diagnostic) | IP 位址                                              |
+| Uptime          | sensor (diagnostic)      | 運行時間（小時）                                     |
+| WiFi Signal     | sensor (diagnostic)      | WiFi 信號強度                                        |
 
 ### 可用模式
 
