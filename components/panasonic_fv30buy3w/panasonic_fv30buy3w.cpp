@@ -80,13 +80,13 @@ void PanasonicFV30BUY3W::on_mode_set(const std::string &value) {
 // ============ Countdown ============
 
 uint32_t PanasonicFV30BUY3W::parse_duration(const std::string &command) {
-  if (command == "待機") return 0;
-  if (command.find("24") != std::string::npos) return UINT32_MAX;
-  if (command.find("15分") != std::string::npos) return 15 * 60;
-  if (command.find("30分") != std::string::npos) return 30 * 60;
-  if (command.find("1小時") != std::string::npos) return 3600;
-  if (command.find("3小時") != std::string::npos) return 3 * 3600;
-  if (command.find("6小時") != std::string::npos) return 6 * 3600;
+  if (command == "Standby") return 0;
+  if (command.find("Cont.") != std::string::npos) return UINT32_MAX;
+  if (command.find("15m") != std::string::npos) return 15 * 60;
+  if (command.find("30m") != std::string::npos) return 30 * 60;
+  if (command.find("1h") != std::string::npos) return 3600;
+  if (command.find("3h") != std::string::npos) return 3 * 3600;
+  if (command.find("6h") != std::string::npos) return 6 * 3600;
   return 0;
 }
 
@@ -95,17 +95,17 @@ void PanasonicFV30BUY3W::update_countdown() {
   if (countdown_duration_s_ == 0) {
     text = "0s";
   } else if (countdown_duration_s_ == UINT32_MAX) {
-    text = "連續";
+    text = "Continuous";
   } else {
     uint32_t elapsed = (millis() - countdown_start_ms_) / 1000;
     int32_t remaining = (int32_t)countdown_duration_s_ - (int32_t)elapsed;
     if (remaining <= 0) {
       // Timer expired — send standby and reset
       ESP_LOGI(TAG, "Countdown expired, switching to standby");
-      current_command_ = "待機";
+      current_command_ = "Standby";
       command_pending_ = true;
       countdown_duration_s_ = 0;
-      if (mode_select_) mode_select_->publish_state("待機");
+      if (mode_select_) mode_select_->publish_state("Standby");
       text = "0s";
     } else if (remaining < 60) {
       // Last minute — show seconds
@@ -133,7 +133,7 @@ void PanasonicFV30BUY3W::setup() {
   pinMode(pin_, OUTPUT_OPEN_DRAIN);
   digitalWrite(pin_, HIGH);
 
-  if (mode_select_) mode_select_->publish_state("待機");
+  if (mode_select_) mode_select_->publish_state("Standby");
   if (host_connection_) host_connection_->publish_state(false);
   if (remaining_time_) remaining_time_->publish_state("0s");
 

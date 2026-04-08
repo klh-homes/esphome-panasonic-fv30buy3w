@@ -27,14 +27,14 @@ static const int WF_POLLING[] = {
   5,2,3,1,5,2,3,1,5,2,3,1,5,2,3,1,5,2,3,1,5,2,3,1,5,2,3,1,1,2,7,1,1,1,1
 };
 
-// --- Command: 待機 ---
+// --- Command: Standby ---
 static const int WF_STANDBY[] = {
   2,1,6,2,1,1,3,2,2,2,1,1,3,2,2,2,5,2,3,1,1,1,3,2,2,2,5,2,3,1,2,1,2,2,
   2,2,5,2,3,1,1,2,2,2,3,1,5,2,3,1,3,1,1,2,2,2,5,2,3,1,1,1,1,1,1,2,3,1,
   5,2,3,1,2,2,1,2,3,1,1,2,7,1,1,2,1
 };
 
-// --- Commands: 換氣 ---
+// --- Commands: Ventilation ---
 static const int WF_VENT_15M[] = {
   2,1,6,2,1,1,3,2,2,2,1,1,3,2,2,2,1,1,3,2,2,2,1,1,3,2,2,2,1,1,3,2,2,2,
   2,1,2,2,2,2,5,2,3,1,1,2,2,2,3,1,5,2,3,1,3,1,1,2,2,2,1,1,3,2,2,2,1,1,
@@ -66,7 +66,7 @@ static const int WF_VENT_24H[] = {
   1,1,1,1,1,2,3,1,2,2,3,1,1,2,2,2,1,2,3,1,1,2,7,1,1,1,1,2,3,1,1
 };
 
-// --- Commands: 取暖 ---
+// --- Commands: Heating ---
 static const int WF_HEAT_15M[] = {
   2,1,6,2,1,1,3,2,2,2,1,1,3,2,2,2,2,1,2,2,2,2,1,1,3,2,2,2,1,1,1,1,1,2,
   3,1,2,1,2,2,2,2,5,2,3,1,1,2,2,2,3,1,5,2,3,1,3,1,1,2,2,2,1,1,3,2,2,2,
@@ -88,7 +88,7 @@ static const int WF_HEAT_3H[] = {
   1,1,1,1,1,2,3,1,5,2,3,1,2,2,1,2,3,1,1,2,7,1,1,8,1
 };
 
-// --- Commands: 乾燥熱 ---
+// --- Commands: Hot Dry ---
 static const int WF_DRYHOT_15M[] = {
   2,1,6,2,1,1,3,2,2,2,1,1,3,2,2,2,1,2,2,2,3,1,1,1,3,2,2,2,1,1,1,1,1,2,
   3,1,2,1,2,2,2,2,5,2,3,1,1,2,2,2,3,1,5,2,3,1,3,1,1,2,2,2,1,1,3,2,2,2,
@@ -115,7 +115,7 @@ static const int WF_DRYHOT_6H[] = {
   1,1,1,1,1,2,3,1,5,2,3,1,2,2,1,2,3,1,1,2,7,1,1,2,1
 };
 
-// --- Commands: 乾燥涼 ---
+// --- Commands: Cool Dry ---
 static const int WF_DRYCOOL_15M[] = {
   2,1,6,2,1,1,3,2,2,2,1,1,3,2,2,2,3,1,1,2,2,2,1,1,3,2,2,2,1,1,1,1,1,2,
   3,1,2,1,2,2,2,2,5,2,3,1,1,2,2,2,3,1,5,2,3,1,3,1,1,2,2,2,1,1,3,2,2,2,
@@ -150,7 +150,7 @@ static const int WF_DRYCOOL_24H[] = {
 // ============ Lookup Tables ============
 
 struct CommandEntry {
-  const char *display;   // "待機", "換氣 15分", etc.
+  const char *display;   // "Standby", "Ventilation 15m", etc.
   const int *waveform;
   int len;
 };
@@ -158,28 +158,28 @@ struct CommandEntry {
 #define CMD_ENTRY(disp, arr) {disp, arr, sizeof(arr)/sizeof(int)}
 
 static const CommandEntry COMMANDS[] = {
-  CMD_ENTRY("待機",        WF_STANDBY),
-  CMD_ENTRY("換氣 15分",   WF_VENT_15M),
-  CMD_ENTRY("換氣 30分",   WF_VENT_30M),
-  CMD_ENTRY("換氣 1小時",  WF_VENT_1H),
-  CMD_ENTRY("換氣 3小時",  WF_VENT_3H),
-  CMD_ENTRY("換氣 6小時",  WF_VENT_6H),
-  CMD_ENTRY("換氣 24小時", WF_VENT_24H),
-  CMD_ENTRY("取暖 15分",   WF_HEAT_15M),
-  CMD_ENTRY("取暖 30分",   WF_HEAT_30M),
-  CMD_ENTRY("取暖 1小時",  WF_HEAT_1H),
-  CMD_ENTRY("取暖 3小時",  WF_HEAT_3H),
-  CMD_ENTRY("乾燥熱 15分", WF_DRYHOT_15M),
-  CMD_ENTRY("乾燥熱 30分", WF_DRYHOT_30M),
-  CMD_ENTRY("乾燥熱 1小時",WF_DRYHOT_1H),
-  CMD_ENTRY("乾燥熱 3小時",WF_DRYHOT_3H),
-  CMD_ENTRY("乾燥熱 6小時",WF_DRYHOT_6H),
-  CMD_ENTRY("乾燥涼 15分", WF_DRYCOOL_15M),
-  CMD_ENTRY("乾燥涼 30分", WF_DRYCOOL_30M),
-  CMD_ENTRY("乾燥涼 1小時",WF_DRYCOOL_1H),
-  CMD_ENTRY("乾燥涼 3小時",WF_DRYCOOL_3H),
-  CMD_ENTRY("乾燥涼 6小時",WF_DRYCOOL_6H),
-  CMD_ENTRY("乾燥涼 24小時",WF_DRYCOOL_24H),
+  CMD_ENTRY("Standby",          WF_STANDBY),
+  CMD_ENTRY("Ventilation 15m",  WF_VENT_15M),
+  CMD_ENTRY("Ventilation 30m",  WF_VENT_30M),
+  CMD_ENTRY("Ventilation 1h",   WF_VENT_1H),
+  CMD_ENTRY("Ventilation 3h",   WF_VENT_3H),
+  CMD_ENTRY("Ventilation 6h",   WF_VENT_6H),
+  CMD_ENTRY("Ventilation Cont.", WF_VENT_24H),
+  CMD_ENTRY("Heating 15m",      WF_HEAT_15M),
+  CMD_ENTRY("Heating 30m",      WF_HEAT_30M),
+  CMD_ENTRY("Heating 1h",       WF_HEAT_1H),
+  CMD_ENTRY("Heating 3h",       WF_HEAT_3H),
+  CMD_ENTRY("Hot Dry 15m",      WF_DRYHOT_15M),
+  CMD_ENTRY("Hot Dry 30m",      WF_DRYHOT_30M),
+  CMD_ENTRY("Hot Dry 1h",       WF_DRYHOT_1H),
+  CMD_ENTRY("Hot Dry 3h",       WF_DRYHOT_3H),
+  CMD_ENTRY("Hot Dry 6h",       WF_DRYHOT_6H),
+  CMD_ENTRY("Cool Dry 15m",     WF_DRYCOOL_15M),
+  CMD_ENTRY("Cool Dry 30m",     WF_DRYCOOL_30M),
+  CMD_ENTRY("Cool Dry 1h",      WF_DRYCOOL_1H),
+  CMD_ENTRY("Cool Dry 3h",      WF_DRYCOOL_3H),
+  CMD_ENTRY("Cool Dry 6h",      WF_DRYCOOL_6H),
+  CMD_ENTRY("Cool Dry Cont.", WF_DRYCOOL_24H),
 };
 static const int NUM_COMMANDS = sizeof(COMMANDS) / sizeof(CommandEntry);
 
@@ -218,7 +218,7 @@ class PanasonicFV30BUY3W : public Component {
   binary_sensor::BinarySensor *host_connection_{nullptr};
 
   // State
-  std::string current_command_{"待機"};
+  std::string current_command_{"Standby"};
   bool command_pending_{false};
   uint32_t last_cycle_{0};
   int no_response_count_{0};

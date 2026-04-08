@@ -16,7 +16,7 @@ CONFIG_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.declare_id(PanasonicFV30BUY3W),
         cv.Required(CONF_PIN): cv.int_range(min=0, max=39),
-        # TODO: proxy mode — 預留第二個 pin
+        # TODO: proxy mode — reserve a second pin for passthrough
         # cv.Optional("panel_pin"): cv.int_range(min=0, max=39),
     }
 ).extend(cv.COMPONENT_SCHEMA)

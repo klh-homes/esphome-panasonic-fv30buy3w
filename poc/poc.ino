@@ -1,24 +1,24 @@
-// Panasonic FV-30BUY3W PoC — ESP32 取代面板，發 polling + 讀主機回應
+// Panasonic FV-30BUY3W PoC — ESP32 replaces panel, sends polling + reads host response
 //
-// 接線（2N7000 雙向 level shifter）：
+// Wiring (2N7000 bidirectional level shifter):
 //   ESP32 GPIO23 ──┬── 2N7000 Source
 //                  [10kΩ]── ESP32 3V3
 //   2N7000 Gate ──── ESP32 3V3
-//   主機 Data(黑) ──┬── 2N7000 Drain
-//                   [10kΩ]── 主機 5V(紅)
-//   ESP32 GND ───── 主機 GND(白)
-//   ESP32 用 USB 供電（不接主機 5V 到 VIN）
+//   Host Data (black) ──┬── 2N7000 Drain
+//                       [10kΩ]── Host 5V (red)
+//   ESP32 GND ───── Host GND (white)
+//   ESP32 powered via USB (do not connect Host 5V to VIN)
 //
-// ⚠️ ESP32 GPIO 不是 5V tolerant（最大 3.6V），必須使用 level shifter
+// WARNING: ESP32 GPIOs are NOT 5V tolerant (abs max 3.6V). Level shifter required.
 //
-// Waveform 格式：交替 [LOW_T, HIGH_T, LOW_T, HIGH_T, ..., LOW_T]
-// 1T = 3300μs，封包從 LOW 開始（拉低 data line），封包結束後回到 idle HIGH
+// Waveform format: alternating [LOW_T, HIGH_T, LOW_T, HIGH_T, ..., LOW_T]
+// 1T = 3300us. Packet starts by pulling LOW, returns to idle HIGH after.
 //
-// 用法：燒錄後開 Serial Monitor (115200)，觀察主機回應
+// Usage: flash, open Serial Monitor at 115200
 
 #include <Arduino.h>
 
-// ============ 設定 ============
+// ============ Config ============
 #define VERSION           "0.1.1"
 #define DATA_PIN          23
 #define T_US              3300
@@ -79,41 +79,37 @@ const int WF_RESP_24H[] = {
 };
 
 const KnownResponse KNOWN_RESPONSES[] = {
-  {"待機", WF_RESP_STANDBY, sizeof(WF_RESP_STANDBY)/sizeof(int)},
-  {"15m",  WF_RESP_15M,     sizeof(WF_RESP_15M)/sizeof(int)},
-  {"30m",  WF_RESP_30M,     sizeof(WF_RESP_30M)/sizeof(int)},
-  {"1h",   WF_RESP_1H,      sizeof(WF_RESP_1H)/sizeof(int)},
-  {"3h",   WF_RESP_3H,      sizeof(WF_RESP_3H)/sizeof(int)},
-  {"6h",   WF_RESP_6H,      sizeof(WF_RESP_6H)/sizeof(int)},
-  {"24h",  WF_RESP_24H,     sizeof(WF_RESP_24H)/sizeof(int)},
+  {"Standby", WF_RESP_STANDBY, sizeof(WF_RESP_STANDBY)/sizeof(int)},
+  {"15m",     WF_RESP_15M,     sizeof(WF_RESP_15M)/sizeof(int)},
+  {"30m",     WF_RESP_30M,     sizeof(WF_RESP_30M)/sizeof(int)},
+  {"1h",      WF_RESP_1H,      sizeof(WF_RESP_1H)/sizeof(int)},
+  {"3h",      WF_RESP_3H,      sizeof(WF_RESP_3H)/sizeof(int)},
+  {"6h",      WF_RESP_6H,      sizeof(WF_RESP_6H)/sizeof(int)},
+  {"24h",     WF_RESP_24H,     sizeof(WF_RESP_24H)/sizeof(int)},
 };
 const int NUM_KNOWN = sizeof(KNOWN_RESPONSES) / sizeof(KnownResponse);
 
 // ============ Send Waveform ============
-// Plays alternating LOW/HIGH durations (packet starts by pulling LOW)
 void send_waveform(const int* waveform, int len) {
   pinMode(DATA_PIN, OUTPUT_OPEN_DRAIN);
   for (int i = 0; i < len; i++) {
     digitalWrite(DATA_PIN, (i % 2 == 0) ? LOW : HIGH);
     delayMicroseconds(waveform[i] * T_US);
   }
-  digitalWrite(DATA_PIN, HIGH);  // release to idle (high-Z, pull-up maintains HIGH)
+  digitalWrite(DATA_PIN, HIGH);
 }
 
 // ============ Receive Waveform ============
-// Captures waveform[1:] (from first falling edge)
-// Returns number of values captured, 0 = timeout
 int receive_waveform(int* buffer, int max_len) {
   pinMode(DATA_PIN, INPUT);
   unsigned long start = millis();
 
-  // Wait for falling edge (idle HIGH -> first LOW)
   while (digitalRead(DATA_PIN) == HIGH) {
     if (millis() - start > RX_TIMEOUT_MS) return 0;
   }
 
   int count = 0;
-  bool expect_low = true;  // first value is LOW duration
+  bool expect_low = true;
 
   while (count < max_len) {
     unsigned long t0 = micros();
@@ -133,8 +129,7 @@ int receive_waveform(int* buffer, int max_len) {
 }
 
 // ============ Match Response ============
-// Match by first 26 values (prefix). Index 0 allows ±1 tolerance, rest exact.
-// Values after index 26 change during countdown — ignore them.
+// Prefix match: first 26 values, index 0 allows +/-1, rest exact.
 #define MATCH_PREFIX 26
 const char* match_response(const int* rx_data, int rx_len) {
   if (rx_len < MATCH_PREFIX) return NULL;
@@ -174,12 +169,12 @@ void setup() {
   delay(1000);
   Serial.println("=== Panasonic FV-30BUY3W PoC ===");
   Serial.printf("Version: %s\n", VERSION);
-  Serial.printf("DATA_PIN: GPIO%d, 1T: %dμs\n", DATA_PIN, T_US);
+  Serial.printf("DATA_PIN: GPIO%d, 1T: %dus\n", DATA_PIN, T_US);
   Serial.println("Waveform format: alternating [L,H,L,H,...,L]");
-  Serial.println("開始 polling...\n");
+  Serial.println("Polling started...\n");
 
   pinMode(DATA_PIN, OUTPUT_OPEN_DRAIN);
-  digitalWrite(DATA_PIN, HIGH);  // high-Z, pull-up maintains idle HIGH
+  digitalWrite(DATA_PIN, HIGH);
   delay(500);
 }
 
@@ -201,18 +196,18 @@ void loop() {
   // 4. Print result
   Serial.printf("#%d | ", poll_count);
   if (rx_len == 0) {
-    Serial.println("無回應");
+    Serial.println("No response");
   } else {
     const char* matched = match_response(rx_buffer, rx_len);
     if (matched) {
-      Serial.printf("主機狀態: %s (%d values)\n", matched, rx_len);
+      Serial.printf("Host status: %s (%d values)\n", matched, rx_len);
     } else {
-      Serial.printf("未知回應 (%d values): ", rx_len);
+      Serial.printf("Unknown response (%d values): ", rx_len);
       print_array(rx_buffer, rx_len);
     }
   }
 
   // 5. Return to idle
   pinMode(DATA_PIN, OUTPUT_OPEN_DRAIN);
-  digitalWrite(DATA_PIN, HIGH);  // high-Z idle
+  digitalWrite(DATA_PIN, HIGH);
 }

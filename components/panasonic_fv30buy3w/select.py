@@ -25,11 +25,11 @@ async def to_code(config):
         sel = await select.new_select(
             config[CONF_MODE],
             options=[
-                "待機",
-                "換氣 15分", "換氣 30分", "換氣 1小時", "換氣 3小時", "換氣 6小時", "換氣 24小時",
-                "取暖 15分", "取暖 30分", "取暖 1小時", "取暖 3小時",
-                "乾燥熱 15分", "乾燥熱 30分", "乾燥熱 1小時", "乾燥熱 3小時", "乾燥熱 6小時",
-                "乾燥涼 15分", "乾燥涼 30分", "乾燥涼 1小時", "乾燥涼 3小時", "乾燥涼 6小時", "乾燥涼 24小時",
+                "Standby",
+                "Ventilation 15m", "Ventilation 30m", "Ventilation 1h", "Ventilation 3h", "Ventilation 6h", "Ventilation Cont.",
+                "Heating 15m", "Heating 30m", "Heating 1h", "Heating 3h",
+                "Hot Dry 15m", "Hot Dry 30m", "Hot Dry 1h", "Hot Dry 3h", "Hot Dry 6h",
+                "Cool Dry 15m", "Cool Dry 30m", "Cool Dry 1h", "Cool Dry 3h", "Cool Dry 6h", "Cool Dry Cont.",
             ],
         )
         cg.add(sel.set_parent(parent))

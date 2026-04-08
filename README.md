@@ -1,28 +1,30 @@
 # Panasonic FV-30BUY3W ESPHome Integration
 
-ESP32 取代 Panasonic FV-30BUY3W 浴室換氣暖風機的原廠面板，透過 ESPHome / Home Assistant 控制。
+An ESPHome custom component that replaces the Panasonic FV-30BUY3W bathroom ventilation fan's original control panel with an ESP32, enabling control via Home Assistant.
 
 ![Home Assistant Screenshot](docs/ha-screenshot.png)
 
-## 功能
+![ESPHome Web Server](docs/web-server-screenshot.png)
 
-- 透過 ESPHome / Home Assistant 控制換氣、取暖、乾燥熱、乾燥涼模式
-- 支援 15分 / 30分 / 1小時 / 3小時 / 6小時 / 24小時 定時
-- ESP32 內建倒數計時，到時自動切回待機
-- 主機連線狀態即時偵測
+## Features
 
-## 硬體需求
+- Control ventilation, heating, hot dry, and cool dry modes
+- Timer support: 15m / 30m / 1h / 3h / 6h / 24h - Continuous (varies by mode)
+- Built-in countdown timer with auto-standby on expiry
+- Real-time host connection monitoring
 
-| 零件                   | 數量 | 說明                                    |
-| ---------------------- | ---- | --------------------------------------- |
-| ESP32 開發板           | 1    | NodeMCU-32S 或同等 ESP32-WROOM-32       |
-| 2N7000                 | 1    | N-channel MOSFET（TO-92，用於電位轉換） |
-| 10kΩ 電阻              | 2    | 上拉電阻                                |
-| JST PH 2.0mm 3pin 接頭 | 1    | 對接主機 CN201                          |
+## Hardware Requirements
 
-**⚠️ ESP32 GPIO 不是 5V tolerant（絕對最大值 3.6V），必須使用 level shifter。**
+| Part                         | Qty | Notes                                       |
+| ---------------------------- | --- | ------------------------------------------- |
+| ESP32 dev board              | 1   | NodeMCU-32S or equivalent ESP32-WROOM-32    |
+| 2N7000                       | 1   | N-channel MOSFET (TO-92) for level shifting |
+| 10kΩ resistor                | 2   | Pull-up resistors                           |
+| JST PH 2.0mm 3-pin connector | 1   | Mates with host unit CN201                  |
 
-### 接線圖（2N7000 雙向 level shifter）
+> **Warning:** ESP32 GPIOs are **not** 5V tolerant (abs max 3.6V). A level shifter is required.
+
+### Wiring Diagram (2N7000 Bidirectional Level Shifter)
 
 ```
 ESP32 GPIO23 ──┬── 2N7000 Source (S)
@@ -31,47 +33,47 @@ ESP32 GPIO23 ──┬── 2N7000 Source (S)
 
 2N7000 Gate (G) ──── ESP32 3V3
 
-主機 Data(黑) ──┬── 2N7000 Drain (D)
-                │
-             [10kΩ]── 主機 5V(紅)
+Host Data (black) ──┬── 2N7000 Drain (D)
+                    │
+                 [10kΩ]── Host 5V (red)
 
-ESP32 GND ───── 主機 GND(白)
+ESP32 GND ───── Host GND (white)
 ```
 
-2N7000 腳位（TO-92 正面朝自己）：`[ S ] [ G ] [ D ]`
+**2N7000 pinout** (flat side facing): `[ S ] [ G ] [ D ]`
 
-CN201 線色：白=GND、紅=5V、黑=Data
+**CN201 wire colors:** white = GND, red = 5V, black = Data
 
-## 安裝步驟
+## Installation
 
-### 1. 硬體組裝
+### 1. Hardware Assembly
 
-1. 依上方接線圖接好 2N7000 level shifter
-2. 拔掉原廠面板的 CN201 接頭，改接到 ESP32
-3. ESP32 用 USB 供電（正式版可改接主機 5V 到 VIN）
+1. Wire the 2N7000 level shifter as shown above
+2. Disconnect the CN201 connector from the original panel and connect it to the ESP32
+3. Power the ESP32 via USB (or connect Host 5V to ESP32 VIN for standalone operation)
 
-### 2. 設定
+### 2. Configuration
 
-1. Clone 此 repo
-2. 安裝 ESPHome：`pipx install esphome`
-3. 建立 `secrets.yaml`：
+1. Clone this repository
+2. Install ESPHome: `pipx install esphome`
+3. Create `secrets.yaml`:
    ```yaml
    device_name: "your-device-name"
    friendly_name: "Your Device Name"
    wifi_ssid: "your-wifi-ssid"
    wifi_password: "your-wifi-password"
    ```
-4. 如需修改 GPIO pin，編輯 `fan.yaml` 中的 `pin: 23`
+4. To change the GPIO pin, edit `pin: 23` in `fan.yaml`
 
-### 3. 燒錄
+### 3. Flash
 
-首次燒錄（USB）：
+First flash (USB):
 
 ```bash
 esphome run fan.yaml --device /dev/ttyUSB0
 ```
 
-後續更新（OTA）：
+Subsequent updates (OTA):
 
 ```bash
 esphome run fan.yaml --device OTA
@@ -79,82 +81,85 @@ esphome run fan.yaml --device OTA
 
 ### 4. Home Assistant
 
-1. HA 會自動發現 ESPHome 裝置
-2. 加入裝置後即可使用 Fan Mode 選擇模式
+1. HA will auto-discover the ESPHome device
+2. Add the device, then use the **Fan Mode** select to control the fan
 
-## Home Assistant Entities
+## Entities
 
-| Entity          | 類型                     | 說明                                                 |
-| --------------- | ------------------------ | ---------------------------------------------------- |
-| Fan Mode        | select                   | 待機 / 換氣 15分 / ... / 乾燥涼 24小時（共 23 選項） |
-| Remaining Time  | text_sensor              | ESP32 內部倒數計時（24小時模式顯示「連續」）         |
-| Host Connection | binary_sensor            | 主機回應狀態 ON/OFF                                  |
-| IP Address      | text_sensor (diagnostic) | IP 位址                                              |
-| Uptime          | sensor (diagnostic)      | 運行時間（小時）                                     |
-| WiFi Signal     | sensor (diagnostic)      | WiFi 信號強度                                        |
+| Entity          | Type                     | Description                                             |
+| --------------- | ------------------------ | ------------------------------------------------------- |
+| Fan Mode        | select                   | Standby + 21 mode/timer combinations                    |
+| Remaining Time  | text_sensor              | Internal countdown (shows "Continuous" for Cont. modes) |
+| Host Connection | binary_sensor            | Host unit communication status                          |
+| IP Address      | text_sensor (diagnostic) | Device IP address                                       |
+| Uptime          | sensor (diagnostic)      | Uptime in hours                                         |
+| WiFi Signal     | sensor (diagnostic)      | WiFi RSSI in dBm                                        |
 
-### 可用模式
+### Available Modes
 
-| 模式   | 可選定時                                     |
-| ------ | -------------------------------------------- |
-| 換氣   | 15分 / 30分 / 1小時 / 3小時 / 6小時 / 24小時 |
-| 取暖   | 15分 / 30分 / 1小時 / 3小時                  |
-| 乾燥熱 | 15分 / 30分 / 1小時 / 3小時 / 6小時          |
-| 乾燥涼 | 15分 / 30分 / 1小時 / 3小時 / 6小時 / 24小時 |
+| Mode        | Available Timers                 |
+| ----------- | -------------------------------- |
+| Ventilation | 15m / 30m / 1h / 3h / 6h / Cont. |
+| Heating     | 15m / 30m / 1h / 3h              |
+| Hot Dry     | 15m / 30m / 1h / 3h / 6h         |
+| Cool Dry    | 15m / 30m / 1h / 3h / 6h / Cont. |
 
-## PoC 驗證（可選）
+## PoC Verification (Optional)
 
-如果想先驗證硬體通訊是否正常，可以用 Arduino IDE 燒錄 PoC：
+To verify hardware communication before flashing ESPHome, use the Arduino PoC sketch:
 
-1. Arduino IDE 安裝 ESP32 board support
-2. 開啟 `poc/poc.ino`，選擇 Board: NodeMCU-32S
-3. 燒錄，開 Serial Monitor (115200)
+1. Install ESP32 board support in Arduino IDE
+2. Open `poc/poc.ino`, select Board: NodeMCU-32S
+3. Flash and open Serial Monitor (115200)
 
-預期輸出：
+Expected output:
 
 ```
 === Panasonic FV-30BUY3W PoC ===
 Version: 0.1.1
-#1 | 無回應
-#2 | 無回應
-#3 | 主機狀態: 待機 (79 values)
-#4 | 主機狀態: 待機 (79 values)
+#1 | No response
+#2 | No response
+#3 | Host status: Standby (79 values)
+#4 | Host status: Standby (79 values)
 ```
 
-## 專案結構
+## Project Structure
 
 ```
-├── poc/poc.ino                          # PoC Arduino sketch（Serial debug）
-├── fan.yaml                             # ESPHome 設定檔
+├── fan.yaml                             # ESPHome configuration
+├── secrets.yaml                         # WiFi & device credentials (not tracked)
+├── poc/poc.ino                          # Arduino PoC sketch
 ├── components/panasonic_fv30buy3w/      # ESPHome custom component
 │   ├── __init__.py
 │   ├── select.py
 │   ├── binary_sensor.py
 │   ├── text_sensor.py
-│   ├── panasonic_fv30buy3w.h
-│   └── panasonic_fv30buy3w.cpp
-└── .claude/                             # 協議文件（Claude Code 參考用）
+│   ├── panasonic_fv30buy3w.h            # Waveform data & component header
+│   └── panasonic_fv30buy3w.cpp          # Protocol I/O & component logic
+└── .claude/                             # Protocol documentation
     ├── PROMPT-claude-code.md
     ├── panasonic-fv30buy3w-protocol-analysis.md
     ├── panasonic-fv30buy3w-packets.json
-    └── capture/
+    └── capture/                         # PulseView raw captures (.sr)
 ```
 
-## 協議摘要
+## Protocol Overview
 
-- 自訂脈衝寬度編碼（非 UART / 非 1-Wire）
-- 單線半雙工，面板=master，主機=slave
-- 1T = 3300us，idle = HIGH
-- 通訊週期 ~1460ms（面板 590ms + 130ms gap + 主機 610ms + 130ms gap）
-- 封包格式: waveform 陣列，交替 [LOW_T, HIGH_T, LOW_T, HIGH_T, ...]（偶數 index=LOW，奇數 index=HIGH）
-- 封包從 LOW 開始（將 idle HIGH 拉低），以 LOW 結束後回到 idle HIGH
-- 22 個指令封包 + 1 polling，全部查表法
-- 主機回應只用於偵測連線狀態（有回應 = ON），不解析內容
-- 定時由 ESP32 內部倒數計時管理，倒數歸零自動送待機指令
+The original panel communicates with the host unit over a **single-wire half-duplex bus** using a custom pulse-width encoding scheme.
 
-## Claude Code 注意事項
+| Parameter           | Value                                                        |
+| ------------------- | ------------------------------------------------------------ |
+| Encoding            | Custom pulse-width (not UART, not 1-Wire)                    |
+| Topology            | Single-wire, half-duplex, panel = master                     |
+| Base time unit (1T) | 3300 µs                                                      |
+| Idle state          | Data line HIGH                                               |
+| Communication cycle | ~1460 ms (panel 590ms + 130ms gap + host 610ms + 130ms gap)  |
+| Packet format       | Alternating [LOW_T, HIGH_T, LOW_T, ...] durations in T units |
 
-- `.claude/` 下的檔案是協議的 source of truth，每次新對話請先讀取
-- 封包資料使用 waveform 格式（交替 L/H），偶數 index (0,2,4,...)=LOW，奇數 index (1,3,5,...)=HIGH
-- GPIO 使用 OUTPUT_OPEN_DRAIN 模式，搭配 2N7000 level shifter + pull-up
-- ESP32 GPIO 不是 5V tolerant，絕對不能直接接 5V 信號
+The ESP32 replaces the panel as master. It sends polling packets to maintain the connection, and command packets to change modes. Host responses are used only for connection status detection; the timer countdown is managed internally by the ESP32.
+
+Full protocol analysis: [`.claude/panasonic-fv30buy3w-protocol-analysis.md`](.claude/panasonic-fv30buy3w-protocol-analysis.md)
+
+## License
+
+MIT
