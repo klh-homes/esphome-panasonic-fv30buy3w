@@ -23,7 +23,7 @@
 ESP32 GPIO23 ──┬── 2N7000 Source
                │
             [10kΩ]── ESP32 3V3
-               
+
 2N7000 Gate ──── ESP32 3V3
 
 主機 Data(黑) ──┬── 2N7000 Drain
@@ -115,38 +115,18 @@ loop:
 - 記錄每個 HIGH/LOW 持續時間
 - HIGH 超過 IDLE_THRESHOLD_US 視為封包結束
 - 2N7000 level shifter 將主機 5V 信號轉換為 3.3V 信號
-- 將收到的 waveform 序列與已知主機回應封包比對
+- 主機回應只用於連線狀態偵測（rx_len > 0 = connected），不解析內容
+- 定時由 ESP32 內部倒數計時管理，歸零自動送待機指令
 
-## Home Assistant 整合目標
+## Home Assistant 整合
 
 ### Entities
 
-- `select.bathroom_fan_mode` — 模式選擇: 待機 / 換氣 / 取暖 / 乾燥熱 / 乾燥涼
-- `select.bathroom_fan_timer` — 定時選擇: 15分 / 30分 / 1小時 / 3小時 / 6小時 / 24小時
-  - 根據模式動態調整可用選項（取暖無 6h/24h，乾燥熱無 24h）
-- `sensor.bathroom_fan_host_timer` — 主機回報的定時狀態
-- `sensor.bathroom_fan_host_status` — 主機回應是否正常（連線狀態）
-
-### 模式 × 定時矩陣
-
-|        | 15m | 30m | 1h  | 3h  | 6h  | 24h |
-| ------ | --- | --- | --- | --- | --- | --- |
-| 換氣   | ✅  | ✅  | ✅  | ✅  | ✅  | ✅  |
-| 取暖   | ✅  | ✅  | ✅  | ✅  | ❌  | ❌  |
-| 乾燥熱 | ✅  | ✅  | ✅  | ✅  | ✅  | ❌  |
-| 乾燥涼 | ✅  | ✅  | ✅  | ✅  | ✅  | ✅  |
+- `select.fan_mode` — 單一選擇: 待機 / 換氣 15分 / ... / 乾燥涼 24小時（共 23 選項）
+- `text_sensor.remaining_time` — ESP32 內部倒數計時
+- `binary_sensor.host_connection` — 主機連線狀態 ON/OFF（diagnostic）
 
 ## 開發環境
 
-- 使用 ESPHome
+- 使用 ESPHome (Arduino framework)
 - Home Assistant 已有 ESPHome 整合
-- HA SSH 連線: `ssh hassio@klh-ha`（使用 ProxyJump via klh-public-server）
-
-## 第一步：最小可行驗證
-
-先寫一個簡單的 ESPHome YAML + custom component：
-
-1. ESP32 發 polling 封包
-2. 讀取主機回應
-3. 在 HA log 中顯示收到的回應是什麼
-4. 確認通訊成功後再加模式/定時控制

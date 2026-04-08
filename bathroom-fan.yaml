@@ -33,15 +33,30 @@ select:
     mode:
       id: fan_mode
       name: "Fan Mode"
-    timer:
-      id: fan_timer
-      name: "Fan Timer"
 
 text_sensor:
   - platform: panasonic_fv30buy3w
-    host_timer:
-      id: host_timer
-      name: "Host Timer"
+    remaining_time:
+      id: remaining_time
+      name: "Remaining Time"
+
+binary_sensor:
+  - platform: panasonic_fv30buy3w
     host_connection:
       id: host_connection
       name: "Host Connection"
+      device_class: connectivity
+      entity_category: diagnostic
+      disabled_by_default: true
+
+sensor:
+  - platform: uptime
+    name: "Uptime"
+    entity_category: diagnostic
+    unit_of_measurement: "h"
+    accuracy_decimals: 1
+    filters:
+      - lambda: return x / 3600.0;
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    entity_category: diagnostic

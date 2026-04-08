@@ -46,6 +46,7 @@ PoC 階段 ESP32 用 USB 供電，主機 5V 紅線只提供 Drain 側 pull-up。
 ├── components/panasonic_fv30buy3w/      # ESPHome custom component
 │   ├── __init__.py
 │   ├── select.py
+│   ├── binary_sensor.py
 │   ├── text_sensor.py
 │   ├── panasonic_fv30buy3w.h
 │   └── panasonic_fv30buy3w.cpp
@@ -58,21 +59,22 @@ PoC 階段 ESP32 用 USB 供電，主機 5V 紅線只提供 Drain 側 pull-up。
 
 ## Home Assistant Entities
 
-| Entity       | 類型        | 說明                                                           |
-| ------------ | ----------- | -------------------------------------------------------------- |
-| 風機模式     | select      | 待機 / 換氣 / 取暖 / 乾燥熱 / 乾燥涼                           |
-| 風機定時     | select      | 15分 / 30分 / 1小時 / 3小時 / 6小時 / 24小時（依模式動態調整） |
-| 風機定時狀態 | text_sensor | 主機回報的定時狀態                                             |
-| 風機連線狀態 | text_sensor | 啟動中 / 連線中 / 無回應 / 未知回應                            |
+| Entity          | 類型                       | 說明                                                 |
+| --------------- | -------------------------- | ---------------------------------------------------- |
+| Fan Mode        | select                     | 待機 / 換氣 15分 / ... / 乾燥涼 24小時（共 23 選項） |
+| Remaining Time  | text_sensor                | ESP32 內部倒數計時（24小時模式顯示「連續」）         |
+| Host Connection | binary_sensor (diagnostic) | 主機回應狀態 ON/OFF                                  |
+| Uptime          | sensor (diagnostic)        | 運行時間（小時）                                     |
+| WiFi Signal     | sensor (diagnostic)        | WiFi 信號強度                                        |
 
-### 模式 x 定時可用矩陣
+### 可用模式
 
-|        | 15m | 30m | 1h  | 3h  | 6h  | 24h |
-| ------ | --- | --- | --- | --- | --- | --- |
-| 換氣   | o   | o   | o   | o   | o   | o   |
-| 取暖   | o   | o   | o   | o   |     |     |
-| 乾燥熱 | o   | o   | o   | o   | o   |     |
-| 乾燥涼 | o   | o   | o   | o   | o   | o   |
+| 模式   | 可選定時                                     |
+| ------ | -------------------------------------------- |
+| 換氣   | 15分 / 30分 / 1小時 / 3小時 / 6小時 / 24小時 |
+| 取暖   | 15分 / 30分 / 1小時 / 3小時                  |
+| 乾燥熱 | 15分 / 30分 / 1小時 / 3小時 / 6小時          |
+| 乾燥涼 | 15分 / 30分 / 1小時 / 3小時 / 6小時 / 24小時 |
 
 ## 使用方式
 
@@ -108,9 +110,9 @@ Version: 0.1.1
 - 通訊週期 ~1460ms（面板 590ms + 130ms gap + 主機 610ms + 130ms gap）
 - 封包格式: waveform 陣列，交替 [LOW_T, HIGH_T, LOW_T, HIGH_T, ...]（偶數 index=LOW，奇數 index=HIGH）
 - 封包從 LOW 開始（將 idle HIGH 拉低），以 LOW 結束後回到 idle HIGH
-- 22 個指令封包 + 1 polling + 8 主機回應，全部查表法
-- 主機回應只含定時資訊，不區分模式
-- 主機回應比對方式：前 26 個值 prefix matching（index 0 允許 +/-1 容差），忽略 index 26 以後的 countdown 資料
+- 22 個指令封包 + 1 polling，全部查表法
+- 主機回應只用於偵測連線狀態（有回應 = ON），不解析內容
+- 定時由 ESP32 內部倒數計時管理，倒數歸零自動送待機指令
 
 ## Claude Code 注意事項
 

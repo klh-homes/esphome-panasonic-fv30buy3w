@@ -3,7 +3,7 @@ import esphome.config_validation as cv
 from esphome.const import CONF_ID, CONF_PIN
 
 CODEOWNERS = ["@kirintw"]
-AUTO_LOAD = ["select", "text_sensor"]
+AUTO_LOAD = ["select", "text_sensor", "binary_sensor"]
 
 panasonic_fv30buy3w_ns = cg.esphome_ns.namespace("panasonic_fv30buy3w")
 PanasonicFV30BUY3W = panasonic_fv30buy3w_ns.class_(

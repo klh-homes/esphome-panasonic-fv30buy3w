@@ -133,18 +133,21 @@ int receive_waveform(int* buffer, int max_len) {
 }
 
 // ============ Match Response ============
-// Waveform format: [LOW_T, HIGH_T, LOW_T, HIGH_T, ..., LOW_T]
-// receive_waveform detects first falling edge (start of waveform[0] LOW),
-// captures full waveform, and returns when trailing idle HIGH exceeds threshold.
-// So rx_len = waveform_len.
+// Match by first 26 values (prefix). Index 0 allows ±1 tolerance, rest exact.
+// Values after index 26 change during countdown — ignore them.
+#define MATCH_PREFIX 26
 const char* match_response(const int* rx_data, int rx_len) {
+  if (rx_len < MATCH_PREFIX) return NULL;
   for (int i = 0; i < NUM_KNOWN; i++) {
-    int expected_len = KNOWN_RESPONSES[i].len;
-    if (rx_len != expected_len) continue;
     const int* expected = KNOWN_RESPONSES[i].waveform;
     bool match = true;
-    for (int j = 0; j < expected_len; j++) {
-      if (rx_data[j] != expected[j]) { match = false; break; }
+    for (int j = 0; j < MATCH_PREFIX; j++) {
+      if (j == 0) {
+        int diff = rx_data[j] - expected[j];
+        if (diff < -1 || diff > 1) { match = false; break; }
+      } else {
+        if (rx_data[j] != expected[j]) { match = false; break; }
+      }
     }
     if (match) return KNOWN_RESPONSES[i].name;
   }
