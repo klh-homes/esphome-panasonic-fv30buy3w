@@ -1,23 +1,28 @@
 # Panasonic FV-30BUY3W ESPHome Integration
 
-ESP32 取代 Panasonic FV-30BUY3W 浴室換氣暖風機的原廠面板，透過 Home Assistant 控制。
+ESP32 取代 Panasonic FV-30BUY3W 浴室換氣暖風機的原廠面板，透過 ESPHome / Home Assistant 控制。
 
-## 原理
+![Home Assistant Screenshot](docs/ha-screenshot.png)
 
-原廠面板與主機之間使用自訂脈衝寬度編碼協議，單線半雙工通訊。ESP32 取代面板角色（master），發送 polling/指令封包，接收主機回應，透過 ESPHome 整合到 Home Assistant。
+## 功能
 
-協議細節見 `.claude/panasonic-fv30buy3w-protocol-analysis.md`，封包資料見 `.claude/panasonic-fv30buy3w-packets.json`。
+- 透過 ESPHome / Home Assistant 控制換氣、取暖、乾燥熱、乾燥涼模式
+- 支援 15分 / 30分 / 1小時 / 3小時 / 6小時 / 24小時 定時
+- ESP32 內建倒數計時，到時自動切回待機
+- 主機連線狀態即時偵測
 
-## 硬體
+## 硬體需求
 
-- **主機**: Panasonic FV-30BUY3W
-- **控制器**: ESP32 (NodeMCU-32S 或同等 ESP32-WROOM-32 開發板)
-- **電位轉換**: 2N7000 N-channel MOSFET + 10kΩ pull-up ×2
-- **連接器**: CN201 JST PH 2.0mm 3pin（白=GND, 紅=5V, 黑=Data）
+| 零件                   | 數量 | 說明                                    |
+| ---------------------- | ---- | --------------------------------------- |
+| ESP32 開發板           | 1    | NodeMCU-32S 或同等 ESP32-WROOM-32       |
+| 2N7000                 | 1    | N-channel MOSFET（TO-92，用於電位轉換） |
+| 10kΩ 電阻              | 2    | 上拉電阻                                |
+| JST PH 2.0mm 3pin 接頭 | 1    | 對接主機 CN201                          |
 
 **⚠️ ESP32 GPIO 不是 5V tolerant（絕對最大值 3.6V），必須使用 level shifter。**
 
-### 接線（2N7000 雙向 level shifter）
+### 接線圖（2N7000 雙向 level shifter）
 
 ```
 ESP32 GPIO23 ──┬── 2N7000 Source (S)
@@ -33,29 +38,49 @@ ESP32 GPIO23 ──┬── 2N7000 Source (S)
 ESP32 GND ───── 主機 GND(白)
 ```
 
-PoC 階段 ESP32 用 USB 供電，主機 5V 紅線只提供 Drain 側 pull-up。
-正式版可將主機 5V 紅線接 ESP32 VIN 供電（拔 USB）。
+2N7000 腳位（TO-92 正面朝自己）：`[ S ] [ G ] [ D ]`
 
-2N7000 腳位（TO-92 正面朝你）：`[ S ] [ G ] [ D ]`
+CN201 線色：白=GND、紅=5V、黑=Data
 
-## 專案結構
+## 安裝步驟
 
+### 1. 硬體組裝
+
+1. 依上方接線圖接好 2N7000 level shifter
+2. 拔掉原廠面板的 CN201 接頭，改接到 ESP32
+3. ESP32 用 USB 供電（正式版可改接主機 5V 到 VIN）
+
+### 2. 設定
+
+1. Clone 此 repo
+2. 安裝 ESPHome：`pipx install esphome`
+3. 建立 `secrets.yaml`：
+   ```yaml
+   device_name: "your-device-name"
+   friendly_name: "Your Device Name"
+   wifi_ssid: "your-wifi-ssid"
+   wifi_password: "your-wifi-password"
+   ```
+4. 如需修改 GPIO pin，編輯 `fan.yaml` 中的 `pin: 23`
+
+### 3. 燒錄
+
+首次燒錄（USB）：
+
+```bash
+esphome run fan.yaml --device /dev/ttyUSB0
 ```
-├── poc/poc.ino                          # PoC Arduino sketch（Serial debug）
-├── fan.yaml                             # ESPHome 設定檔
-├── components/panasonic_fv30buy3w/      # ESPHome custom component
-│   ├── __init__.py
-│   ├── select.py
-│   ├── binary_sensor.py
-│   ├── text_sensor.py
-│   ├── panasonic_fv30buy3w.h
-│   └── panasonic_fv30buy3w.cpp
-└── .claude/                             # 協議文件（Claude Code 參考用）
-    ├── PROMPT-claude-code.md            # 專案指引與 ESP32 建議常數
-    ├── panasonic-fv30buy3w-protocol-analysis.md
-    ├── panasonic-fv30buy3w-packets.json # 所有封包 waveform 資料
-    └── capture/                         # PulseView 原始錄製檔 (.sr)
+
+後續更新（OTA）：
+
+```bash
+esphome run fan.yaml --device OTA
 ```
+
+### 4. Home Assistant
+
+1. HA 會自動發現 ESPHome 裝置
+2. 加入裝置後即可使用 Fan Mode 選擇模式
 
 ## Home Assistant Entities
 
@@ -77,14 +102,13 @@ PoC 階段 ESP32 用 USB 供電，主機 5V 紅線只提供 Drain 側 pull-up。
 | 乾燥熱 | 15分 / 30分 / 1小時 / 3小時 / 6小時          |
 | 乾燥涼 | 15分 / 30分 / 1小時 / 3小時 / 6小時 / 24小時 |
 
-## 使用方式
+## PoC 驗證（可選）
 
-### Step 1: PoC 驗證通訊
+如果想先驗證硬體通訊是否正常，可以用 Arduino IDE 燒錄 PoC：
 
 1. Arduino IDE 安裝 ESP32 board support
 2. 開啟 `poc/poc.ino`，選擇 Board: NodeMCU-32S
 3. 燒錄，開 Serial Monitor (115200)
-4. 依上方接線圖接好 2N7000 level shifter，連接主機 Data/GND/5V
 
 預期輸出：
 
@@ -97,11 +121,24 @@ Version: 0.1.1
 #4 | 主機狀態: 待機 (79 values)
 ```
 
-### Step 2: ESPHome 正式版
+## 專案結構
 
-1. 修改 `secrets.yaml` 中的 WiFi 設定
-2. 用 ESPHome 編譯並燒錄
-3. Home Assistant 中加入裝置
+```
+├── poc/poc.ino                          # PoC Arduino sketch（Serial debug）
+├── fan.yaml                             # ESPHome 設定檔
+├── components/panasonic_fv30buy3w/      # ESPHome custom component
+│   ├── __init__.py
+│   ├── select.py
+│   ├── binary_sensor.py
+│   ├── text_sensor.py
+│   ├── panasonic_fv30buy3w.h
+│   └── panasonic_fv30buy3w.cpp
+└── .claude/                             # 協議文件（Claude Code 參考用）
+    ├── PROMPT-claude-code.md
+    ├── panasonic-fv30buy3w-protocol-analysis.md
+    ├── panasonic-fv30buy3w-packets.json
+    └── capture/
+```
 
 ## 協議摘要
 
@@ -120,5 +157,4 @@ Version: 0.1.1
 - `.claude/` 下的檔案是協議的 source of truth，每次新對話請先讀取
 - 封包資料使用 waveform 格式（交替 L/H），偶數 index (0,2,4,...)=LOW，奇數 index (1,3,5,...)=HIGH
 - GPIO 使用 OUTPUT_OPEN_DRAIN 模式，搭配 2N7000 level shifter + pull-up
-- ⚠️ ESP32 GPIO 不是 5V tolerant，絕對不能直接接 5V 信號
-- 未來可能新增 proxy mode（ESP32 插在面板與主機之間），send/receive 函式已預留 pin 參數
+- ESP32 GPIO 不是 5V tolerant，絕對不能直接接 5V 信號
