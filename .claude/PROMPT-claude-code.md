@@ -104,7 +104,7 @@ LOW 6600µs → HIGH 3300µs → LOW 19800µs → HIGH 6600µs → LOW 16500µs 
 ### ESPHome Entities
 
 - `select.fan_mode` — single select: standby + 21 mode/timer combinations
-- `text_sensor.remaining_time` — internal countdown display
+- `text_sensor.timer_expires` — timer expiry timestamp (`device_class: timestamp`)
 - `binary_sensor.host_connection` — host communication status (diagnostic)
 
 ## Development

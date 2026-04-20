@@ -4,6 +4,7 @@
 #include "esphome/components/select/select.h"
 #include "esphome/components/text_sensor/text_sensor.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
+#include "esphome/components/time/real_time_clock.h"
 #include <Arduino.h>
 
 namespace esphome {
@@ -203,7 +204,8 @@ class PanasonicFV30BUY3W : public Component {
   void set_pin(uint8_t pin) { pin_ = pin; }
   void set_mode_select(FanModeSelect *s) { mode_select_ = s; }
   void set_host_connection(binary_sensor::BinarySensor *s) { host_connection_ = s; }
-  void set_remaining_time(text_sensor::TextSensor *s) { remaining_time_ = s; }
+  void set_timer_expires(text_sensor::TextSensor *s) { timer_expires_ = s; }
+  void set_time(time::RealTimeClock *t) { time_ = t; }
 
   void setup() override;
   void loop() override;
@@ -214,8 +216,9 @@ class PanasonicFV30BUY3W : public Component {
  protected:
   uint8_t pin_;
   FanModeSelect *mode_select_{nullptr};
-  text_sensor::TextSensor *remaining_time_{nullptr};
+  text_sensor::TextSensor *timer_expires_{nullptr};
   binary_sensor::BinarySensor *host_connection_{nullptr};
+  time::RealTimeClock *time_{nullptr};
 
   // State
   std::string current_command_{"Standby"};
@@ -227,8 +230,10 @@ class PanasonicFV30BUY3W : public Component {
   uint32_t countdown_start_ms_{0};
   uint32_t countdown_duration_s_{0};  // 0=standby, UINT32_MAX=continuous
   uint32_t last_countdown_update_{0};
-  std::string last_remaining_str_{};
-  void update_countdown();
+  bool expiry_pending_publish_{false};
+  std::string last_expiry_str_{};
+  void check_timer_expiry();
+  void publish_expiry();
   static uint32_t parse_duration(const std::string &command);
 
   // Protocol I/O

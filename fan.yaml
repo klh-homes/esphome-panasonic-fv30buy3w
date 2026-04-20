@@ -25,8 +25,13 @@ external_components:
       type: local
       path: components
 
+time:
+  - platform: homeassistant
+    id: ha_time
+
 panasonic_fv30buy3w:
   pin: 23
+  time_id: ha_time
 
 select:
   - platform: panasonic_fv30buy3w
@@ -40,9 +45,10 @@ text_sensor:
       name: "IP Address"
       entity_category: diagnostic
   - platform: panasonic_fv30buy3w
-    remaining_time:
-      id: remaining_time
-      name: "Remaining Time"
+    timer_expires:
+      id: timer_expires
+      name: "Timer Expires"
+      device_class: timestamp
 
 binary_sensor:
   - platform: panasonic_fv30buy3w

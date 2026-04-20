@@ -74,7 +74,7 @@ void PanasonicFV30BUY3W::on_mode_set(const std::string &value) {
 
   countdown_duration_s_ = parse_duration(value);
   countdown_start_ms_ = millis();
-  update_countdown();
+  publish_expiry();
 }
 
 // ============ Countdown ============
@@ -90,40 +90,62 @@ uint32_t PanasonicFV30BUY3W::parse_duration(const std::string &command) {
   return 0;
 }
 
-void PanasonicFV30BUY3W::update_countdown() {
-  std::string text;
-  if (countdown_duration_s_ == 0) {
-    text = "0s";
-  } else if (countdown_duration_s_ == UINT32_MAX) {
-    text = "Continuous";
-  } else {
-    uint32_t elapsed = (millis() - countdown_start_ms_) / 1000;
-    int32_t remaining = (int32_t)countdown_duration_s_ - (int32_t)elapsed;
-    if (remaining <= 0) {
-      // Timer expired — send standby and reset
-      ESP_LOGI(TAG, "Countdown expired, switching to standby");
-      current_command_ = "Standby";
-      command_pending_ = true;
-      countdown_duration_s_ = 0;
-      if (mode_select_) mode_select_->publish_state("Standby");
-      text = "0s";
-    } else if (remaining < 60) {
-      // Last minute — show seconds
-      text = to_string(remaining) + "s";
-    } else if (remaining < 3600) {
-      int m = remaining / 60;
-      text = to_string(m) + "m";
-    } else {
-      int h = remaining / 3600;
-      int m = (remaining % 3600) / 60;
-      text = to_string(h) + "h " + to_string(m) + "m";
-    }
+void PanasonicFV30BUY3W::check_timer_expiry() {
+  if (countdown_duration_s_ == 0 || countdown_duration_s_ == UINT32_MAX) return;
+
+  uint32_t elapsed = (millis() - countdown_start_ms_) / 1000;
+  if (elapsed < countdown_duration_s_) return;
+
+  ESP_LOGI(TAG, "Countdown expired, switching to standby");
+  current_command_ = "Standby";
+  command_pending_ = true;
+  countdown_duration_s_ = 0;
+  if (mode_select_) mode_select_->publish_state("Standby");
+  // Intentionally leave timer_expires_ alone: HA keeps showing the past
+  // expiry ("X ago"), accurate for natural expiry. Only user-chosen Standby clears it.
+}
+
+void PanasonicFV30BUY3W::publish_expiry() {
+  if (!timer_expires_) {
+    expiry_pending_publish_ = false;
+    return;
   }
 
-  if (remaining_time_ && text != last_remaining_str_) {
-    last_remaining_str_ = text;
-    remaining_time_->publish_state(text);
+  // Standby or Continuous → no valid expiry timestamp
+  if (countdown_duration_s_ == 0 || countdown_duration_s_ == UINT32_MAX) {
+    if (last_expiry_str_ != "") {
+      last_expiry_str_ = "";
+      timer_expires_->publish_state("");
+    }
+    expiry_pending_publish_ = false;
+    return;
   }
+
+  // Defer until HA time is synchronised.
+  if (time_ == nullptr || !time_->now().is_valid()) {
+    expiry_pending_publish_ = true;
+    return;
+  }
+
+  uint32_t elapsed = (millis() - countdown_start_ms_) / 1000;
+  if (elapsed >= countdown_duration_s_) {
+    expiry_pending_publish_ = false;
+    return;
+  }
+  uint32_t remaining_s = countdown_duration_s_ - elapsed;
+
+  time_t expiry_epoch = (time_t) (time_->now().timestamp + remaining_s);
+  struct tm tm_utc;
+  gmtime_r(&expiry_epoch, &tm_utc);
+  char buf[32];
+  strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S+00:00", &tm_utc);
+  std::string s(buf);
+
+  if (s != last_expiry_str_) {
+    last_expiry_str_ = s;
+    timer_expires_->publish_state(s);
+  }
+  expiry_pending_publish_ = false;
 }
 
 // ============ Component Lifecycle ============
@@ -135,7 +157,7 @@ void PanasonicFV30BUY3W::setup() {
 
   if (mode_select_) mode_select_->publish_state("Standby");
   if (host_connection_) host_connection_->publish_state(false);
-  if (remaining_time_) remaining_time_->publish_state("0s");
+  if (timer_expires_) timer_expires_->publish_state("");
 
   command_pending_ = true;
 }
@@ -143,10 +165,11 @@ void PanasonicFV30BUY3W::setup() {
 void PanasonicFV30BUY3W::loop() {
   uint32_t now = millis();
 
-  // Update countdown every second
+  // Once per second: check for timer expiry and retry deferred publish.
   if (now - last_countdown_update_ >= 1000) {
     last_countdown_update_ = now;
-    update_countdown();
+    check_timer_expiry();
+    if (expiry_pending_publish_) publish_expiry();
   }
 
   if (now - last_cycle_ < 1460) return;

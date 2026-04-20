@@ -86,14 +86,14 @@ esphome run fan.yaml --device OTA
 
 ## Entities
 
-| Entity          | Type                     | Description                                             |
-| --------------- | ------------------------ | ------------------------------------------------------- |
-| Fan Mode        | select                   | Standby + 21 mode/timer combinations                    |
-| Remaining Time  | text_sensor              | Internal countdown (shows "Continuous" for Cont. modes) |
-| Host Connection | binary_sensor            | Host unit communication status                          |
-| IP Address      | text_sensor (diagnostic) | Device IP address                                       |
-| Uptime          | sensor (diagnostic)      | Uptime in hours                                         |
-| WiFi Signal     | sensor (diagnostic)      | WiFi RSSI in dBm                                        |
+| Entity          | Type                     | Description                                            |
+| --------------- | ------------------------ | ------------------------------------------------------ |
+| Fan Mode        | select                   | Standby + 21 mode/timer combinations                   |
+| Timer Expires   | text_sensor (timestamp)  | Timer expiry as ISO 8601 (unknown for Standby / Cont.) |
+| Host Connection | binary_sensor            | Host unit communication status                         |
+| IP Address      | text_sensor (diagnostic) | Device IP address                                      |
+| Uptime          | sensor (diagnostic)      | Uptime in hours                                        |
+| WiFi Signal     | sensor (diagnostic)      | WiFi RSSI in dBm                                       |
 
 ### Available Modes
 
